@@ -1,3 +1,5 @@
+import { CompilerPlugin } from 'src/compiler/public';
+
 import type { ConfigFlags } from '../cli/config-flags';
 import type { PrerenderUrlResults, PrintLine } from '../internal';
 import type { BuildCtx, CompilerCtx } from './stencil-private';
@@ -10,6 +12,8 @@ export * from './stencil-public-docs';
  * https://stenciljs.com/docs/config/
  */
 export interface StencilConfig {
+  compilerPlugins?: CompilerPlugin[];
+
   /**
    * By default, Stencil will attempt to optimize small scripts by inlining them in HTML. Setting
    * this flag to `false` will prevent this optimization and keep all scripts separate from HTML.

@@ -1,4 +1,5 @@
 import { augmentDiagnosticWithNode, buildError, buildWarn, toDashCase } from '@utils';
+import { getBeforePropDecoratorToStaticPlugins } from 'src/compiler/compiler-plugins';
 import ts from 'typescript';
 
 import type * as d from '../../../declarations';
@@ -35,7 +36,7 @@ export const propDecoratorsToStatic = (
   typeChecker: ts.TypeChecker,
   program: ts.Program,
   newMembers: ts.ClassElement[],
-  decoratorName: string,
+  decoratorName: string, // Prop
 ): void => {
   const properties = decoratedProps
     .filter((prop) => ts.isPropertyDeclaration(prop) || ts.isGetAccessor(prop))
@@ -75,6 +76,22 @@ const parsePropDecorator = (
   const propOptions: d.PropOptions = decoratorParams[0] || {};
 
   const { staticName: propName, dynamicName: ogPropName } = tsPropDeclName(prop, typeChecker);
+
+  getBeforePropDecoratorToStaticPlugins().forEach((plugin) =>
+    plugin[1].beforePropDecoratorToStatic?.(
+      {
+        compilerContext: {} as any, // TODO Compiler context not existing here. Maybe think about a context system
+        additionalCompilerContext: {
+          newClassMembers: newMembers,
+        },
+      },
+      {
+        componentOptions: {} as any, // TODO Compiler context not existing here. Maybe think about a context system
+        propOptions,
+        classMemberName: propName,
+      },
+    ),
+  );
 
   if (isMemberPrivate(prop)) {
     const err = buildError(diagnostics);

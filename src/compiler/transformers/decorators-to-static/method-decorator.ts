@@ -123,7 +123,7 @@ const isTypePromise = (typeStr: string) => {
   return /^Promise<.+>$/.test(typeStr);
 };
 
-export const validateMethods = (diagnostics: d.Diagnostic[], members: ts.NodeArray<ts.ClassElement>) => {
+export const validateMethods = (diagnostics: d.Diagnostic[], members: ts.ClassElement[]) => {
   members.filter(ts.isMethodDeclaration).map((method) => {
     if (method.name.getText() === 'componentDidUnload') {
       const err = buildError(diagnostics);
