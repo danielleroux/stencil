@@ -18,7 +18,9 @@ import {
   TranspileOptions,
   TranspileResults,
 } from '@stencil/core/internal';
+import ts from 'typescript';
 
+import * as d from '../declarations';
 export { transpile, transpileSync } from './transpile';
 
 /**
@@ -102,6 +104,71 @@ export declare const vermoji: string;
  * Compiler's unique build ID.
  */
 export declare const buildId: string;
+
+export type StencilCompilerContext = {
+  config: d.ValidatedConfig;
+  diagnostics: d.Diagnostic[];
+  typeChecker: ts.TypeChecker;
+  classNode: ts.ClassDeclaration;
+  sourceFile: ts.SourceFile;
+};
+
+export type TsCompilerParameters = {
+  config: d.ValidatedConfig;
+  typeChecker: ts.TypeChecker;
+  diagnostics: d.Diagnostic[];
+  cmpNode: ts.ClassDeclaration;
+  classMembers: ts.ClassElement[];
+  componentDecorator: ts.Decorator;
+};
+
+export type TsCompilerParametersExtra = TsCompilerParameters & {
+  newClassMembers: ts.ClassElement[];
+  importAliasMap: Map<string, string>;
+};
+
+export type CompilerPlugin = [
+  string,
+  {
+    beforeComponentDecoratorToStatic?: (
+      content: {
+        compilerContext: StencilCompilerContext;
+        additionalCompilerContext: {
+          classMembers: ts.ClassElement[];
+        };
+      },
+      api: {
+        componentOptions: d.ComponentOptions;
+      },
+    ) => void;
+
+    onComponentDecoratorToStatic?: (
+      context: {
+        compilerContext: StencilCompilerContext;
+        additionalCompilerContext: {
+          classMembers: ts.ClassElement[];
+        };
+      },
+      api: {
+        componentOptions: d.ComponentOptions;
+      },
+    ) => void;
+
+    beforePropDecoratorToStatic?: (
+      context: {
+        compilerContext: StencilCompilerContext;
+        additionalCompilerContext: {
+          newClassMembers: ts.ClassElement[];
+        };
+      },
+      api: {
+        componentOptions: d.ComponentOptions;
+        propOptions: d.PropOptions;
+        classMemberName: string;
+      },
+    ) => void;
+  },
+];
 
 export {
   Compiler,

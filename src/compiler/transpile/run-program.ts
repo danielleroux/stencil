@@ -11,6 +11,7 @@ import ts from 'typescript';
 
 import type * as d from '../../declarations';
 import { updateComponentBuildConditionals } from '../app-core/app-data';
+import { addCompilerPluginsFromConfig } from '../compiler-plugins';
 import { resolveComponentDependencies } from '../entries/resolve-component-dependencies';
 import { performAutomaticKeyInsertion } from '../transformers/automatic-key-insertion';
 import { convertDecoratorsToStatic } from '../transformers/decorators-to-static/convert-decorators';
@@ -67,6 +68,8 @@ export const runTsProgram = async (
       });
     }
   };
+
+  addCompilerPluginsFromConfig(config);
 
   const transformers: ts.CustomTransformers = {
     before: [

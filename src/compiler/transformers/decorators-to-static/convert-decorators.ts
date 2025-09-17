@@ -1,11 +1,14 @@
 import { augmentDiagnosticWithNode, buildError } from '@utils';
+import {
+  getBeforeComponentDecoratorToStaticPlugins,
+  getConvertComponentDecoratorToStaticPlugins,
+} from 'src/compiler/compiler-plugins';
 import ts from 'typescript';
 
 import type * as d from '../../../declarations';
 import { retrieveTsDecorators, retrieveTsModifiers, updateConstructor } from '../transform-utils';
 import { attachInternalsDecoratorsToStatic } from './attach-internals';
-import { componentDecoratorToStatic } from './component-decorator';
-import { isDecoratorNamed } from './decorator-utils';
+import { getDecoratorParameters, isDecoratorNamed } from './decorator-utils';
 import { CLASS_DECORATORS_TO_REMOVE, MEMBER_DECORATORS_TO_REMOVE } from './decorators-constants';
 import { elementDecoratorsToStatic } from './element-decorator';
 import { eventDecoratorsToStatic } from './event-decorator';
@@ -91,7 +94,7 @@ const visitClassDeclaration = (
   const importAliasMap = new ImportAliasMap(sourceFile);
 
   const componentDecorator = retrieveTsDecorators(classNode)?.find(isDecoratorNamed(importAliasMap.get('Component')));
-  const classMembers = classNode.members;
+  const classMembers = Array.from(classNode.members);
   const decoratedMembers = classMembers.filter((member) => (retrieveTsDecorators(member)?.length ?? 0) > 0);
 
   if (!decoratedMembers.length && !componentDecorator) {
@@ -101,23 +104,56 @@ const visitClassDeclaration = (
   // create an array of all class members which are _not_ methods decorated
   // with a Stencil decorator. We do this here because we'll implement the
   // behavior specified for those decorated methods later on.
-  const filteredMethodsAndFields = removeStencilMethodDecorators(Array.from(classMembers), diagnostics, importAliasMap);
+  const filteredMethodsAndFields = removeStencilMethodDecorators(classMembers, diagnostics, importAliasMap);
 
   if (componentDecorator) {
-    // parse component decorator
-    componentDecoratorToStatic(
-      config,
-      typeChecker,
-      diagnostics,
-      classNode,
-      filteredMethodsAndFields,
-      componentDecorator,
-    );
+    const [componentOptions] = getDecoratorParameters<d.ComponentOptions>(componentDecorator, typeChecker);
+    if (componentOptions) {
+      getBeforeComponentDecoratorToStaticPlugins().forEach((plugin) => {
+        plugin[1].beforeComponentDecoratorToStatic?.(
+          {
+            compilerContext: {
+              config,
+              diagnostics,
+              typeChecker,
+              classNode,
+              sourceFile,
+            },
+            additionalCompilerContext: {
+              classMembers: filteredMethodsAndFields,
+            },
+          },
+          {
+            componentOptions,
+          },
+        );
+      });
+      getConvertComponentDecoratorToStaticPlugins().forEach((plugin) => {
+        plugin[1].onComponentDecoratorToStatic?.(
+          {
+            compilerContext: {
+              config,
+              diagnostics,
+              typeChecker,
+              classNode,
+              sourceFile,
+            },
+            additionalCompilerContext: {
+              classMembers: filteredMethodsAndFields,
+            },
+          },
+          {
+            componentOptions,
+          },
+        );
+      });
+    }
   }
 
   // stores a reference to fields that should be watched for changes
   // parse member decorators (Prop, State, Listen, Event, Method, Element and Watch)
   if (decoratedMembers.length > 0) {
+    console.log(importAliasMap);
     propDecoratorsToStatic(
       diagnostics,
       decoratedMembers,
